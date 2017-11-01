@@ -16,52 +16,63 @@ ajv.addFormat(
 
 import { isObject, mergeObjects } from "./utils";
 
-function toErrorSchema(errors) {
-  // Transforms a ajv validation errors list:
-  // [
-  //   {property: ".level1.level2[2].level3", message: "err a"},
-  //   {property: ".level1.level2[2].level3", message: "err b"},
-  //   {property: ".level1.level2[4].level3", message: "err b"},
-  // ]
-  // Into an error tree:
-  // {
-  //   level1: {
-  //     level2: {
-  //       2: {level3: {__errors: ["err a", "err b"]}},
-  //       4: {level3: {__errors: ["err b"]}},
-  //     }
-  //   }
-  // };
-  if (!errors.length) {
-    return {};
+class Errors {
+  constructor(errors) {
+    this.errors = errors;
   }
-  return errors.reduce((errorSchema, error) => {
-    const { property, message } = error;
-    const path = toPath(property);
-    let parent = errorSchema;
 
-    // If the property is at the root (.level1) then toPath creates
-    // an empty array element at the first index. Remove it.
-    if (path.length > 0 && path[0] === "") {
-      path.splice(0, 1);
+  getErrorSchema() {
+    // Transforms a ajv validation errors list:
+    // [
+    //   {property: ".level1.level2[2].level3", message: "err a"},
+    //   {property: ".level1.level2[2].level3", message: "err b"},
+    //   {property: ".level1.level2[4].level3", message: "err b"},
+    // ]
+    // Into an error tree:
+    // {
+    //   level1: {
+    //     level2: {
+    //       2: {level3: {__errors: ["err a", "err b"]}},
+    //       4: {level3: {__errors: ["err b"]}},
+    //     }
+    //   }
+    // };
+    const errors = this.errors;
+    if (!errors.length) {
+      return {};
     }
+    return errors.reduce((errorSchema, error) => {
+      const { property, message } = error;
+      const path = toPath(property);
+      let parent = errorSchema;
 
-    for (const segment of path.slice(0)) {
-      if (!(segment in parent)) {
-        parent[segment] = {};
+      // If the property is at the root (.level1) then toPath creates
+      // an empty array element at the first index. Remove it.
+      if (path.length > 0 && path[0] === "") {
+        path.splice(0, 1);
       }
-      parent = parent[segment];
-    }
-    if (Array.isArray(parent.__errors)) {
-      // We store the list of errors for this node in a property named __errors
-      // to avoid name collision with a possible sub schema field named
-      // "errors" (see `validate.createErrorHandler`).
-      parent.__errors = parent.__errors.concat(message);
-    } else {
-      parent.__errors = [message];
-    }
-    return errorSchema;
-  }, {});
+
+      for (const segment of path.slice(0)) {
+        if (!(segment in parent)) {
+          parent[segment] = {};
+        }
+        parent = parent[segment];
+      }
+      if (Array.isArray(parent.__errors)) {
+        // We store the list of errors for this node in a property named __errors
+        // to avoid name collision with a possible sub schema field named
+        // "errors" (see `validate.createErrorHandler`).
+        parent.__errors = parent.__errors.concat(message);
+      } else {
+        parent.__errors = [message];
+      }
+      return errorSchema;
+    }, {});
+  }
+}
+
+function toErrorSchema(errors) {
+  return new Errors(errors).getErrorSchema();
 }
 
 export function toErrorList(errorSchema, fieldName = "root") {
