@@ -27,8 +27,8 @@ function toErrorSchema(errors) {
   // {
   //   level1: {
   //     level2: {
-  //       2: {level3: {errors: ["err a", "err b"]}},
-  //       4: {level3: {errors: ["err b"]}},
+  //       2: {level3: {__errors: ["err a", "err b"]}},
+  //       4: {level3: {__errors: ["err b"]}},
   //     }
   //   }
   // };
