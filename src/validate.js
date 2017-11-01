@@ -16,7 +16,7 @@ ajv.addFormat(
 
 import { isObject, mergeObjects } from "./utils";
 
-class Errors {
+class ErrorInfo {
   constructor(errors) {
     this.errors = errors;
   }
@@ -71,10 +71,6 @@ class Errors {
   }
 }
 
-function toErrorSchema(errors) {
-  return new Errors(errors).getErrorSchema();
-}
-
 export function toErrorList(errorSchema, fieldName = "root") {
   // XXX: We should transform fieldName as a full field path string.
   let errorList = [];
@@ -99,7 +95,7 @@ function createErrorHandler(formData) {
   const handler = {
     // We store the list of errors for this node in a property named __errors
     // to avoid name collision with a possible sub schema field named
-    // "errors" (see `toErrorSchema`).
+    // "errors" (see `ErrorInfo.getErrorSchema`).
     __errors: [],
     addError(message) {
       this.__errors.push(message);
@@ -171,7 +167,8 @@ export default function validateFormData(
   if (typeof transformErrors === "function") {
     errors = transformErrors(errors);
   }
-  const errorSchema = toErrorSchema(errors);
+  const errorInfo = new ErrorInfo(errors);
+  const errorSchema = errorInfo.getErrorSchema();
 
   if (typeof customValidate !== "function") {
     return { errors, errorSchema };
